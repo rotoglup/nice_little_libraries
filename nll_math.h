@@ -93,6 +93,8 @@ void nllMat44Scale( float *m, float x, float y, float z );
 void nllMat44ScaleInverse( float *m, float x, float y, float z );
 
 void nllMat44Frustum( float* m, float left, float right, float bottom, float top, float nearVal, float farVal );
+void nllMat44FrustumInverse( float* m, float left, float right, float bottom, float top, float nearVal, float farVal );
+
 void nllMat44Ortho( float *m, float left, float right, float bottom, float top, float nearVal, float farVal );
 void nllMat44Orthogonal33( float *m, const float c0[3], const float c1[3], const float c2[3] );
 void nllMat44Orthogonal33Inverse( float *m, const float c0[3], const float c1[3], const float c2[3] );
@@ -340,6 +342,36 @@ void nllMat44Frustum(float* m, float left, float right, float bottom, float top,
 	NLLM_(m, 3, 0) = 0.0f; NLLM_(m, 3, 1) = 0.0f; NLLM_(m, 3, 2) = -1.0f; NLLM_(m, 3, 3) = 0.0f;
 }
 
+/*
+// inverse frustum, given by wxMaxima:
+
+(normal)
+ratsimp(invert(matrix(
+  [2*n/(r-l),0,0,((r+l))/(r-l)],
+  [0,2*n/(t-b),0,((t+b))/(t-b)],
+  [0,0,(-(f+n))/(f-n),-2*f*n/(f-n)],
+  [0,0,-1,0]
+)));
+=> matrix(
+  [(r-l)/(2*n),0,-((n-f)*r+l*n-f*l)/(4*f*n^2),-((n+f)*r+l*n+f*l)/(4*f*n^2)],
+  [0,(t-b)/(2*n),-((n-f)*t+b*n-b*f)/(4*f*n^2),-((n+f)*t+b*n+b*f)/(4*f*n^2)],
+  [0,0,0,-1],
+  [0,0,(n-f)/(2*f*n),(n+f)/(2*f*n)]
+);
+
+(infinite zfar)
+factor(ratsimp(invert(matrix(
+  [2*n/(r-l),0,0,((r+l))/(r-l)],
+  [0,2*n/(t-b),0,((t+b))/(t-b)],
+  [0,0,E-1,n*(E-2)],
+  [0,0,-1,0]
+))));
+=> matrix(
+  [(r-l)/(2*n),0,-(r+l)/(2*n^2*(E-2)),-((r+l)*(E-1))/(2*n^2*(E-2))],
+  [0,(t-b)/(2*n),-(t+b)/(2*n^2*(E-2)),-((t+b)*(E-1))/(2*n^2*(E-2))],
+  [0,0,0,-1],[0,0,1/(n*(E-2)),(E-1)/(n*(E-2))]
+)
+*/
 void nllMat44FrustumInverse(float* m, float left, float right, float bottom, float top, float nearVal, float farVal)
 {
 	float div1 = 2.f * nearVal;
@@ -370,6 +402,34 @@ void nllMat44FrustumInverse(float* m, float left, float right, float bottom, flo
 	NLLM_(m, 1, 0) = 0.0f; NLLM_(m, 1, 1) = Y; NLLM_(m, 1, 2) = C; NLLM_(m, 1, 3) = D;
 	NLLM_(m, 2, 0) = 0.0f; NLLM_(m, 2, 1) = 0.0f; NLLM_(m, 2, 2) = 0.0f; NLLM_(m, 2, 3) = -1.0f;
 	NLLM_(m, 3, 0) = 0.0f; NLLM_(m, 3, 1) = 0.0f; NLLM_(m, 3, 2) = E; NLLM_(m, 3, 3) = F;
+
+#if 0
+  /* FIXME(nll) infinite zfar case, needs some testing, this EPSILON value is an old empirical one */
+  float const EPSILON = 1e-2f;
+
+  float div1 = 2.f * nearVal;
+  float div2 = 2.f * nearVal * nearVal * (EPSILON - 2.f);
+  float div3 = nearVal * (EPSILON - 2.f);
+
+  float rl = right + left;
+  float tb = top + bottom;
+
+  float X = (right - left) / div1;
+  float Y = (top - bottom) / div1;
+
+  float A = -(rl) / div2;
+  float B = -(rl * (EPSILON - 1.f)) / div2;
+  float C = -(tb) / div2;
+  float D = -(tb * (EPSILON - 1.f)) / div2;
+
+  float E = 1.f / div3;
+  float F = (EPSILON - 1.f) / div3;
+
+  NLLM_(m,0,0) = X;    NLLM_(m,0,1) = 0.0f; NLLM_(m,0,2) = A;    NLLM_(m,0,3) = B;
+  NLLM_(m,1,0) = 0.0f; NLLM_(m,1,1) = Y;    NLLM_(m,1,2) = C;    NLLM_(m,1,3) = D;
+  NLLM_(m,2,0) = 0.0f; NLLM_(m,2,1) = 0.0f; NLLM_(m,2,2) = 0.0f; NLLM_(m,2,3) = -1.0f;
+  NLLM_(m,3,0) = 0.0f; NLLM_(m,3,1) = 0.0f; NLLM_(m,3,2) = E;    NLLM_(m,3,3) = F;
+#endif
 }
 
 void nllMat44Ortho( float *m, float left, float right, float bottom, float top, float nearVal, float farVal )

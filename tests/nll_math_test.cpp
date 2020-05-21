@@ -10,6 +10,8 @@
 #define CHECK_VEC3_EQ(a, b) for (int i=0; i<3; i++) { CHECK(a[i] == b[i]); }
 #define CHECK_M44_EQ(a, b) for (int i=0; i<16; i++) { CHECK(a[i] == b[i]); }
 
+#define CHECK_M44_NEAR(a, b) for (int i=0; i<16; i++) { CHECK(fabsf(a[i]-b[i]) < FLT_EPSILON); }
+
 TEST_CASE("nllMat44Rotation") {
 
 	const nllVec3 basis[3] = { {1,0,0}, {0,1,0}, {0,0,1} };
@@ -49,4 +51,16 @@ TEST_CASE("nllMat44RotationAxis") {
 	nllMat44RotationAxis(mAxis, nllVec3Set(axis, 0, 0, 1), cosA, sinA);
 	nllMat44RotationZ(mRef, cosA, sinA);
 	CHECK_M44_EQ(mAxis, mRef);
+}
+
+TEST_CASE("nllMat4Frustum")
+{
+	nllMat44 mProj, mProjInv, mTest;
+	nllMat44Frustum(mProj, -1, 1, -1, 1, 1, 100);
+	nllMat44FrustumInverse(mProjInv, -1, 1, -1, 1, 1, 100);
+	nllMat44Mul(mTest, mProjInv, mProj);
+
+	nllMat44 mIdentity;
+	nllMat44Identity(mIdentity);
+	CHECK_M44_NEAR(mTest, mIdentity);
 }
